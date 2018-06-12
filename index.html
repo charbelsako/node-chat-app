@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Chat App</title>
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+	<script src="socket.io/socket.io.js"></script>
+	<style>
+	/* code from adam khoury */
+	#cpBtn{
+		position: fixed;
+		right: 20px;
+		width: 20px;
+		height: 24px;
+		background: linear-gradient(#FFF,#DDD);
+		border: #AAA 1px solid;
+		border-radius: 2px;
+		padding: 2px 5px;
+		cursor: pointer;
+		transition: border 0.3s linear 0s;
+		z-index: 9;
+	}
+	#cpBtn:hover{
+		border: #06F 1px solid;
+	}
+	#cpBtn:hover div{
+		background: #06F;
+	}
+	#cpBtn > div{
+		width: 20px;
+		height: 4px;
+		background: #333;
+		margin: 3px 0px;
+		border-radius: 4px;
+		transition: background 0.3s linear 0s;
+	}
+	#cp{
+		position: fixed;
+		right: 0px; /* only for debugging */
+		top: 0px;
+		width: 260px;
+		height: 100%;
+		background: #DDD;
+		opacity: 1;  /* only for debugging */
+		transition: opacity .3s linear 0s, right .3s linear 0s;
+		cursor: pointer;
+		z-index: 1;
+	}
+	/* end of code from adam khoury */
+	#cp_list{
+		list-style: none;
+	}
+	#cp_list button{
+		width: 110px;
+		height: 50px;
+		margin-bottom: 20px;
+		font-size: 16px;
+	}
+
+
+
+	#chat{
+		height: 400px;
+		width: 520px;
+		margin: 0px;
+		padding: 0px;
+		border: 1px solid black;
+		overflow-y: scroll;
+		vertical-align: text-top;
+	}
+	
+	#unread{
+		margin: 0;
+		padding: 0;
+		width: 10px;
+		border: 1px solid blue;
+		color: orange;
+	}
+	#users_list{
+		width: 200px;
+		
+		text-align: center;
+		overflow-y: scroll;
+	}
+	#online_user{
+		margin-bottom: 10px;
+	}
+
+	#container{
+		display: none;
+	}
+	#container > div{
+		display: none;
+	}
+	#container #global_tab{
+		display: block;
+	}
+	table{
+		margin-left: auto;
+		margin-right: auto;
+		margin-bottom: 20px;
+	}
+	#formsArea{
+		text-align: center;
+	}
+	#loginFormArea{
+		display: block;
+	}
+	#signupFormArea{
+		display: none;
+	}
+	#signupFormArea table{
+		width: 400px;
+
+	}
+	.grid {
+		width: 750px;
+		height: 500px;
+		background-color: black;
+		display: grid;
+		grid-row-gap: 10px;
+		grid-template-columns: 380px 380px;
+		margin: 10px auto;
+	}
+	.grid-item{
+		overflow-y: scroll;
+		
+		background-color: springgreen;
+	}
+
+	#code{
+		height: 100px;
+		width: 300px;
+		font-size: 50px;
+	}
+
+	#verificationFormArea{
+		display: none;
+	}
+		
+	</style>
+	<!-- script for flyout menu -->
+	<script>
+		function toggleCP(){
+			var cp = document.getElementById("cp");
+			if(cp.style.opacity == 1){
+				cp.style.opacity = 0;
+				cp.style.right = "-260px"; // remove it from active screen space
+			} else {
+				cp.style.right = "0px"; // return it to active screen space
+				cp.style.opacity = 1;
+			}
+		}
+	</script>
+	<!-- end of script for flyout menu -->
+	<script type="text/javascript">
+		//for quick selecting
+		function _(x){
+			return document.getElementById(x);
+		}
+
+		let initialDiv = 'global_tab';
+		function appear(next){
+			_(initialDiv).style.display = "none";
+			_(next).style.display = "block";
+			initialDiv = next;
+		}
+
+		function replaceForm(start, end){
+			_(start).style.display = "none";
+			_(end).style.display = "block";
+			return false;
+		}
+
+		
+	</script>
+</head>
+<body>
+	<!-- flyout menu -->
+	<div id="cpBtn" onclick="toggleCP()">
+	  <div></div>
+	  <div></div>
+	  <div></div>
+	</div>
+	<div id="cp">
+		<ul id="cp_list">
+			<li><button onclick="appear('global_tab')">Global Chat</button></li>
+			<li><button onclick="appear('private_tab')">Private Chat</button></li>
+			<li><button onclick="appear('contacts_tab')">Contacts</button></li>
+			<li><button onclick="appear('groups_tab')">Groups</button></li>
+			<!-- <li><button onclick="appear('profile_tab')">Profile</button></li> -->
+		</ul>
+	</div>
+	<!-- end of flyout menu -->
+
+<!-- start of user forms -->
+	<div id="formsArea">
+		<div id="signupFormArea">
+			<h3>Sign up</h3>
+			<p><a href="#" onclick="replaceForm('signupFormArea', 'loginFormArea')">Click here</a> if you already have an account</p>
+			<table border="1" cellpadding="7">
+				<form id="signupForm">
+					<tr>
+						<td id="signup_status" colspan="2">Errors</td>
+					</tr>
+
+					<tr>
+						<td> <label for="username">Username</label> </td>
+						<td> <input type="text" id="username" autocomplete="off"> </td>
+					</tr>
+
+					<tr>
+						<td> <label for="number">Phone Number</label> </td>
+						<td> <input type="tel" id="number"> </td>
+					</tr>
+
+					<tr>
+						<td> <label for="password">Password</label> </td>
+						<td> <input type="password" id="password" autocomplete="current-password"> </td>
+					</tr>
+
+					<tr>
+						<td> </td>
+						<td > <input type="submit" value="SignUp"> </td>
+					</tr>
+				</form>
+			</table>
+		</div>
+
+		<div id="verificationFormArea">
+			<h3>Verify Your Account</h3>
+			<form id="verificationForm">
+				<input type="number" id="code" max="99999" ><br> <br>
+				<input type="submit" value="Verify Account">
+			</form>
+			<p id="v_status"> </p>
+		</div>
+
+		<div id="loginFormArea">
+			<h3>Login</h3>
+			<p> <a href="#" onclick="replaceForm('loginFormArea','signupFormArea')">Click here</a> if you do not have an account</p>
+			<form id="loginForm">
+				<table border="1" cellpadding="7">
+					<tr>
+						<td id="login_status" colspan="2">Error</td>
+					</tr>
+					<tr>
+						<td> <label for="login_user">Username</label> </td>
+						<td> <input type="text" id="login_user" autocomplete="off"> </td>
+					</tr>
+					<tr>
+						<td> <label for="password">Password</label> </td>
+						<td> <input type="password" id="login_pass" autocomplete="current-password"> </td>
+					</tr>
+					<tr>
+						<td> </td>
+						<td> <input type="submit" value="Login"> </td>
+					</tr>
+				</table>
+			</form>
+		</div>
+	</div>
+
+<!-- end of user forms -->
+
+	<div id="container">
+		<div id="global_tab">
+			<table border="1">
+				<tr> <td>Online Users</td> <td>Messages</td> </tr>
+				<tr style="height: 400px;"> 
+					<td rowspan="2"  style="vertical-align: text-top;">
+						<div style="vertical-align: text-top; padding: 0;">
+							<table id="users_list" >
+								<!-- <tr> 
+									<td >Charbel</td>
+									<td> <button onclick="addUser()">Add Contact</button>  </td>
+									add contact coming soon
+								</tr> -->
+							</table>
+						<br />	
+						</div>
+						
+						<!-- <button id="online_user"> Charbel  <span id="unread">2</span> </button> <br /> -->
+						<!-- <div>
+						Sarkis <button onclick="addUser('Sarkis')">Add Contact</button>		
+						</div> -->
+					</td> 
+
+					<td >
+						<div id="chat">
+
+						</div>
+					</td> 
+				</tr>
+				<tr> 
+					<td>
+						<form id="messageForm">
+							<textarea id="message"></textarea>
+							<br>
+							<input type="submit" value="Send Message">
+						</form>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<!-- end of global tab design -->
+		<div id="contacts_tab">
+			<div class="grid">
+				<div class="grid-item" id="contacts_list">
+					<h3>Contacts </h3>
+					<table id="contacts">
+						<tr> <td>Charbel Sarkis</td> <td><button>unfriend</button></td> </tr>
+						<tr> <td>Charbel</td> <td><button>unfriend</button></td> </tr>
+						<tr> <td>hello world fhwe</td> <td><button>unfriend</button></td> </tr>
+						<tr> <td>1111111111111111</td> <td><button>unfriend</button></td> </tr>
+					</table>
+				</div>
+				<div class="grid-item" id="contacts_requests">
+					<h3>Contact Requests</h3>
+				</div>
+			</div>
+		</div>
+		<!-- end of contacts tab -->
+		<div id="private_tab">
+			
+		</div>
+		<!-- end of private tab -->
+		<div id="groups_tab">
+			
+		</div>
+		<!-- end of groups tab -->
+	</div>
+	<script type="text/javascript">
+		
+
+		//security implementations need to be set in place to prevent anyone from showing the container whenever he wants 
+		//a way to fix that is to set a logged_in boolean variable to prevent any unwanted behaviour
+		//jquery code to do the magic
+		$(function(){
+			let socket = io.connect()
+
+			let $messageForm = $('#messageForm')
+			let $message = $('#message')
+
+			//contacts tab
+			//variables for adding new contact requests AND contacts
+			let $contacts_requests = $('#contacts_requests')
+			let $contacts_list = $('#contacts_list')
+			let $contacts = $('#contacts')
+
+			//sign up form variables
+			let $signupFormArea = $('#signupFormArea')
+			let $signupForm = $('#signupForm')
+			let $username = $('#username')
+			// this variable is used to keep track of the currently logged in user
+			var msg_username;
+			let $password = $('#password')
+			let $status = $('#signup_status')
+
+			//contains main app design
+			let $container = $('#container') 
+
+			//contains all the forms
+			let $formsArea = $('#formsArea') 
+
+			//login variables
+			let $loginFormArea = $('#loginFormArea')
+			let $loginForm = $('#loginForm')
+			let $login_status = $('#login_status')
+			let $login_user = $('#login_user')
+			let $login_pass = $('#login_pass')
+
+			//the DIV where i will put the messages
+			let $chat = $('#chat') 
+			//the DIV where you will see the active users
+			let $users = $('#users_list') 
+		
+			//variables for verification
+			let $v_username
+			let $verificationFormArea = $('#verificationFormArea')
+			let $verificationForm = $('#verificationForm')
+			let $v_code = $('#code')
+			let $v_status = $('#v_status')
+
+
+			//code that verifies the user
+			$verificationForm.submit(e => {
+				e.preventDefault()
+				console.log('verifying user') //only for debugging
+				let data = {
+					code: $v_code.val(),
+					username: $v_username
+				}
+				socket.emit('verify code', data, (data) => {
+					if(data){
+						confirm('your account has been verified')
+						$loginFormArea.show()
+					}else{
+						$v_status.html('wrong verification code')
+					}
+				})
+			})
+
+			//function that submits the message form
+			$messageForm.submit(e => {
+				e.preventDefault()
+				let data = {
+					username: msg_username, //just realized that i don't need this since i can send the socket.username from the server instead
+					msg: $message.val()
+				}
+				socket.emit('send message', data , (callback)=>{ //remember to change this later
+					//error reporting
+					//might not need this anymore. when i finish the app. private messaging will have a socket.emit of its own
+				})
+				$message.val('');
+			})
+
+			//code that grabs the new message and shows it to everyone
+			socket.on('new message', data => {
+				$chat.append('<strong>'+data.username+':</strong> '+data.msg+' <br >')
+			})
+
+			//signupForm code 
+			$signupForm.submit(e => {
+				e.preventDefault()
+				let data = {
+					username: $username.val(),
+					password: $password.val()
+				}
+				$v_username = $username.val()
+				socket.emit('new user', data , (data) => {
+					if(data){
+						$signupFormArea.hide() //now i can show the verification form
+						$verificationFormArea.show()
+						
+					}else{
+						$status.html('that username is already taken choose another one')
+					}
+				})
+				$username.val('')
+			})
+
+			//code that handles the contact request (after a user presses the add me button ) this is what will the receiving user see
+			socket.on('contact request', (data) =>{
+				console.log('adding this user')
+				//show the user the data as a button in the contacts tab
+				$contacts_requests.append('<p id="from'+data.from+'">'+data.from+' wants to add you <button id="accept'+data.from+'">Accept</button> or <button id="reject'+data.from+'">Reject</button></p>')
+				
+				//these two function can be replaced by one function that sends a data object with an `accepted` boolean
+				//probably gonna do that in the future
+				$('#accept'+data.from).click( () => {
+					//emit a function that adds them together in their contacts Arrays respectively
+					socket.emit('accepted contact request', {to: data.to, from: data.from})
+				})
+				//in case he rejects the request delete the html element
+				//since the requests aren't in a database i can do this
+				$('#reject'+data.from).click( () => {
+					//delete this request from the page
+					console.log('deleting request from'+data.from)
+					$('#from'+data.from).remove()
+				})		
+			})
+
+			//populating the users list
+			socket.on('usernames', data => {
+				let html = ''
+				$users.html(html)
+				for(let user of data){
+					html = '<tr> <td>'+user+'</td>'
+					if( user !== msg_username){
+						html += '<td> <button id="add'+user+'">Add Contact</button> </td>' 
+					}
+					html += '</tr>'
+					$users.append(html)
+					//adding function
+					$('#add'+user).click( () => {
+						const u = user
+						//send the add contact function thingie
+						socket.emit('add contact', u)
+					})
+				}
+			})
+
+			//upon accepting the contact request
+			socket.on('request accepted', data => {
+				alert('you accepted '+data+' contact request')
+			})
+
+			//updating the contacts list
+			socket.on('update contacts', data => {
+				let html = ''
+				$contacts.html(html)
+				for(let i = 0; i < data.length; i++){
+					//add a function for the unfriend button
+					html = '<tr> <td>'+data[i]+'</td> <td> <button>Unfriend</button></td></tr>'
+					$contacts.append(html)
+				}
+				
+			})
+
+			//code that handles the login form and emits a login function
+			$loginForm.submit(e=>{
+				e.preventDefault()
+				let data = {
+					username: $login_user.val(),
+					password: $login_pass.val()
+				}
+				msg_username = $login_user.val()
+				socket.emit('login', data, (callback)=>{
+					if(callback === 'success'){
+						$loginFormArea.hide()
+						$container.show()
+					}else{
+						$login_status.html(callback)
+					}
+				})
+			})
+
+			//whisper will be much more complex when i finish the app
+			//a whisper is a private message. this code shows it to the user
+			socket.on( 'whisper' , data => {
+				//add stuff later
+				if(data.dir == 'to'){
+					$chat.append('<i><u>To</u>: <strong>'+data.username+':</strong> '+data.msg+' <br ></i>')	
+				}else{
+					$chat.append('<i><u>From:</u> <strong>'+data.username+':</strong> '+data.msg+' <br ></i>')
+				}
+			})
+
+		//END
+		})
+	</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+1. let the login page show up first //done
+2. add logged in variable for security //added (haven't implemented security yet)
+3. add (add contact method) send the other user a request. // i think it's done
+4. respond (accept/reject) allows the other user to respond. // i think it's done can't remember
+5. private messaging with contacts // ooohhh daaaammmn son
+
+
+use this instead of adding the onclick attribute(this works apparently)
+elt.onclick = function(){} // native javascript
+$('#id').click( () => {}) // JQuery click function
+elt.addEventListener('click', () => {} ) // adding an event listener
+
+PROBLEMS AND SOLUTIONS	
+	problem:
+	-i wasn't able to add an onclick event directly to the new html i wanted to dynamically add
+	solution
+	-> i had to (in the loop) add that specific html to the document used the jquery click to assign a
+	click function and that fixed it
+
+	 
